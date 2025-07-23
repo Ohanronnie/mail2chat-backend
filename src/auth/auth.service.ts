@@ -6,7 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from './schemas/user.schema';
 import { Model } from 'mongoose';
-import { isClientReady, sendMessage } from 'src/whatsapp';
+import whatsappService, { isClientReady, sendMessage } from 'src/whatsapp';
 
 @Injectable()
 export class AuthService {
@@ -56,47 +56,62 @@ export class AuthService {
     try {
       const userExists = await this.userModel.findOne({ email });
       if (userExists) {
-        return jwt
+        return jwt;
       } else {
         const user = new this.userModel({
           email,
           googleAccessToken: tokens.access_token,
           googleRefreshToken: tokens.refresh_token,
           tokenExpiry: tokens.expiry_date,
-          linkedAt: new Date()
+          linkedAt: new Date(),
         });
         await user.save();
       }
-
     } catch (err) {
       console.log(err);
-      throw new BadRequestException("error occured somewhere")
+      throw new BadRequestException('error occured somewhere');
     }
     return jwt;
   }
   async sendOtp(phoneNumber: string, email: string) {
     const otp = Math.floor(100000 + Math.random() * 900000);
-    const update = await this.userModel.updateOne({ email }, {
-      otp,
-      phoneNumber
-    });
-    console.log(otp, phoneNumber, email, isClientReady())
+    const update = await this.userModel.updateOne(
+      { email },
+      {
+        otp,
+        phoneNumber,
+      },
+    );
+
+    console.log(otp, phoneNumber, email, isClientReady());
     if (isClientReady()) {
-      sendMessage(phoneNumber, `[Mail2Chat] Your otp is ${otp}`)
+      sendMessage(phoneNumber, `[Mail2Chat] Your otp is ${otp}`);
     }
   }
   async verifyOtp(email: string, otp: string) {
     const user = await this.userModel.findOne({ email });
-    console.log(email, otp, user)
     if (user) {
-      console.log(otp, user)
-      if (otp == user.otp as unknown as string) {
-        return true
+      if (otp == (user.otp as unknown as string)) {
+        await this.userModel.updateOne({ email }, { isPhoneVerified: true });
+        return true;
       } else {
-        return false
+        return false;
       }
     } else {
-      return false
+      return false;
     }
+  }
+  async getUser(email: string) {
+    const user = await this.userModel.findOne({ email });
+
+    return {
+      phoneVerified: user?.isPhoneVerified,
+      phoneNumber: user?.phoneNumber,
+      email: user?.email,
+    };
+  }
+  async deleteAccount(email: string) {
+    await this.userModel.deleteOne({ email });
+    return true;
   }
 }

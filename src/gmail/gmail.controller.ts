@@ -1,14 +1,16 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { GmailService } from './gmail.service';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller('gmail')
 export class GmailController {
   constructor(private readonly gmailService: GmailService) {}
 
   @Get('unread')
-  async getUnreadEmails() {
-    console.log("request here")
+  @UseGuards(AuthGuard)
+  async getUnreadEmails(@Req() req: any) {
+    const user = req.user.email;
     const emails = await this.gmailService.fetchUnreadEmails();
-    return { count: emails.length, emails };
+    return { count: emails?.length, emails };
   }
 }

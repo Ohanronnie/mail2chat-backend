@@ -28,7 +28,10 @@ export class User extends Document {
   lastEmailFetched: Date;
 
   @Prop({ type: Number })
-  otp: number
+  otp: number;
+
+  @Prop({ type: Date })
+  lastCheckInTime: Date
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

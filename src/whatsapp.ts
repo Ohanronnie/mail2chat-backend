@@ -1,5 +1,6 @@
 import { Client, LocalAuth } from 'whatsapp-web.js';
 import * as qrcode from 'qrcode-terminal';
+import { onTextReceived } from './custom-module';
 
 class WhatsAppService {
   private client: Client;
@@ -8,6 +9,9 @@ class WhatsAppService {
   constructor() {
     this.client = new Client({
       authStrategy: new LocalAuth(),
+      puppeteer: {
+        headless: true,
+      },
     });
 
   }
@@ -20,14 +24,10 @@ class WhatsAppService {
     this.client.on('ready', () => {
       console.log('✅ Client is ready!');
       this.isReady = true;
+     
     });
-
-    this.client.on('message', (msg) => {
-      if (msg.body.toLowerCase() === 'hello') {
-        msg.reply('Wahala for who no greet back 😂');
-      }
-    });
-
+    this.client.on('message', onTextReceived);
+    console.log("here xyz")
     this.client.initialize();
   }
 
@@ -35,7 +35,9 @@ class WhatsAppService {
     if (!this.isReady) {
       throw new Error('Client is not ready yet!');
     }
-    await this.client.sendMessage(`${to}@c.us`, message);
+    const normalized = to.replace(/^\+/, '');
+    console.log(normalized);
+    await this.client.sendMessage(`${normalized}@c.us`, message);
   }
 
   public isClientReady(): boolean {

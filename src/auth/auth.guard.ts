@@ -5,11 +5,17 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectModel } from '@nestjs/mongoose';
 import { Request } from 'express';
+import { User } from './schemas/user.schema';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private jwtService: JwtService,
+    @InjectModel(User.name) private readonly userModel: Model<User>,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -19,8 +25,8 @@ export class AuthGuard implements CanActivate {
     }
     try {
       const payload = await this.jwtService.verifyAsync(token);
-      // 💡 We're assigning the payload to the request object here
-      // so that we can access it in our route handlers
+      const user = await this.userModel.findOne({ email: payload.email });
+      if (!user) throw new UnauthorizedException();
       request['user'] = payload;
     } catch {
       throw new UnauthorizedException();
