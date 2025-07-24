@@ -7,10 +7,10 @@ export class GmailController {
   constructor(private readonly gmailService: GmailService) {}
 
   @Get('unread')
-  @UseGuards(AuthGuard)
   async getUnreadEmails(@Req() req: any) {
-    const user = req.user.email;
+    
     const emails = await this.gmailService.fetchUnreadEmails();
-    return { count: emails?.length, emails };
+    
+    
   }
 }
