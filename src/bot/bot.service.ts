@@ -12,8 +12,10 @@ export class BotService implements OnModuleInit {
   private readonly logger = new Logger(BotService.name);
   onModuleInit() {
     this.client.on('qr', (qr) => {
-      this.logger.log(`Qr code: ${qr}`)
+      this.logger.log(`Qr code: ${qr}`);
+      this.eventEmitter.emit("qrcode.created", qr);
       qrcode.generate(qr, { small: true });
+      
     });
 
     this.client.on('ready', () => {
