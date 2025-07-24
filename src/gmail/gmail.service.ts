@@ -4,7 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { User } from 'src/auth/schemas/user.schema';
 import { Model } from 'mongoose';
 import * as cheerio from 'cheerio';
-import { sendMessage } from 'src/whatsapp';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 function extraClean(text: string) {
   return text
@@ -17,7 +17,10 @@ export class GmailService {
   private readonly logger = new Logger(GmailService.name);
   private gmail;
 
-  constructor(@InjectModel(User.name) private readonly userModel: Model<User>) {
+  constructor(
+    @InjectModel(User.name) private readonly userModel: Model<User>,
+    private eventEmitter: EventEmitter2,
+  ) {
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
@@ -30,6 +33,10 @@ export class GmailService {
     const users = await this.userModel.find({ isPhoneVerified: true });
     for (let i = 0; i < users.length; i++) {
       const user = users[i];
+      const oldDate = new Date(user.lastCheckInTime);
+      const now = new Date();
+      const hoursElapsed = (now.getTime() - oldDate.getTime()) / (1000* 60*60);
+      if(hoursElapsed > 24) continue;
       const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
@@ -89,7 +96,10 @@ export class GmailService {
 ${extraClean(body)}
 ----------------------
 Powered by MailBridge 🌉`;
-            sendMessage(user.phoneNumber, BodyText);
+            this.eventEmitter.emit('mail.send', {
+              phone: user.phoneNumber,
+              message: BodyText,
+            });
             await this.userModel.updateOne({ lastEmailFetched: new Date() });
           }),
         );

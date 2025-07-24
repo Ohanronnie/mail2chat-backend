@@ -5,6 +5,8 @@ import { AuthModule } from './auth/auth.module';
 import { GmailModule } from './gmail/gmail.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { BotModule } from './bot/bot.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         };
       },
     }),
+    BotModule,
+    EventEmitterModule.forRoot()
   ],
   controllers: [AppController],
   providers: [AppService],

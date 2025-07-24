@@ -11,7 +11,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { sendMessage } from 'src/whatsapp';
 import { AuthGuard } from './auth.guard';
 import { OTPCodeDto, PhoneNumberDto } from './auth.dto';
 

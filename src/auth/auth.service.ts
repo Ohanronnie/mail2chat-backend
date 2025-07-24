@@ -6,7 +6,8 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from './schemas/user.schema';
 import { Model } from 'mongoose';
-import whatsappService, { isClientReady, sendMessage } from 'src/whatsapp';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
+import WAWebJS from 'whatsapp-web.js';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +17,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
     @InjectModel(User.name) private readonly userModel: Model<User>,
+    private eventEmitter: EventEmitter2,
   ) {
     this.oauth2Client = new google.auth.OAuth2(
       configService.get('GOOGLE_CLIENT_ID'),
@@ -82,11 +84,10 @@ export class AuthService {
         phoneNumber,
       },
     );
-
-    console.log(otp, phoneNumber, email, isClientReady());
-    if (isClientReady()) {
-      sendMessage(phoneNumber, `[Mail2Chat] Your otp is ${otp}`);
-    }
+    this.eventEmitter.emit('user.token.send', {
+      message: `[MailBridge] Your OTP is ${otp}`,
+      phone: phoneNumber,
+    });
   }
   async verifyOtp(email: string, otp: string) {
     const user = await this.userModel.findOne({ email });
@@ -109,6 +110,17 @@ export class AuthService {
       phoneNumber: user?.phoneNumber,
       email: user?.email,
     };
+  }
+  @OnEvent('chat.message')
+  async handleMessage(payload: WAWebJS.Message) {
+    const phone = payload.from.split('@')[0];
+    const user = await this.userModel.findOne({ phoneNumber: `+${phone}` });
+    if (!user) return payload.reply('Who are you please? ');
+    await this.userModel.updateOne(
+      { _id: user._id },
+      { lastCheckInTime: new Date() },
+    );
+    return payload.reply("Okay boss. I will send your mails as soon as they drop.")
   }
   async deleteAccount(email: string) {
     await this.userModel.deleteOne({ email });
